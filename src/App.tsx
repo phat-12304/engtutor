@@ -3,10 +3,10 @@ import { Outlet } from 'react-router-dom'
 function App() {
   return (
     <div className="min-h-dvh flex flex-col">
-      <header className="border-b bg-white">
+      <header className="bg-white">
         <div className="container-page flex h-16 items-center justify-between">
           <a href="/" className="flex items-center gap-2 font-semibold">
-            <img src="/output-onlinepngtools.png" alt="EngTutor" className="h-6 w-6" />
+            <img src="/output-onlinepngtools.png" alt="EngTutor" className="h-8 w-8" />
             <span>EngTutor</span>
           </a>
           <nav className="flex items-center gap-6 text-sm font-semibold">
@@ -32,7 +32,7 @@ function App() {
       </main>
 
       <footer className="border-t bg-white">
-        <div className="container-page py-6 text-sm text-gray-600">
+        <div className="container-page py-6 text-sm text-gray-600 text-center">
           © {new Date().getFullYear()} EngTutor. All rights reserved.
         </div>
       </footer>

@@ -10,11 +10,9 @@ const signInSchema = z.object({
 })
 
 const signUpSchema = z.object({
-  name: z.string().min(2, 'Tên tối thiểu 2 ký tự'),
   email: z.string().email('Email không hợp lệ'),
   password: z.string().min(6, 'Mật khẩu tối thiểu 6 ký tự'),
-  confirm: z.string(),
-}).refine((d) => d.password === d.confirm, { path: ['confirm'], message: 'Mật khẩu không khớp' })
+})
 
 type SignInValues = z.infer<typeof signInSchema>
 type SignUpValues = z.infer<typeof signUpSchema>
@@ -41,66 +39,54 @@ function LoginPage() {
   }
 
   return (
-    <div className="min-h-[80dvh] bg-slate-50/60">
+    <div className="min-h-[80dvh] bg-gradient-to-br from-blue-50/40 via-slate-50/30 to-indigo-50/40">
       <div className="container-page grid min-h-[80dvh] place-items-center py-8">
-        <div className="w-full max-w-md rounded-xl border bg-white p-5 shadow-sm">
-          <div className="mb-4 text-center">
-            <h1 className="text-xl font-semibold">Welcome to EngTutor</h1>
-            <p className="mt-1 text-xs text-gray-600">Sign in or create a new account</p>
+        <div className="w-full max-w-md rounded-3xl border-0 bg-white/95 backdrop-blur-sm p-8 shadow-2xl shadow-gray-900/20">
+          <div className="mb-6 text-center">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Chào mừng đến với EngTutor</h1>
+            <p className="mt-2 text-sm text-gray-500">Đăng nhập hoặc tạo tài khoản mới</p>
           </div>
 
-          <div className="mb-4 grid grid-cols-2 rounded-full border bg-slate-50 p-1 text-xs font-medium">
-            <button onClick={() => setTab('signin')} className={`rounded-full py-2 transition-colors ${tab === 'signin' ? 'bg-white shadow' : 'text-gray-600'}`}>Sign In</button>
-            <button onClick={() => setTab('signup')} className={`rounded-full py-2 transition-colors ${tab === 'signup' ? 'bg-white shadow' : 'text-gray-600'}`}>Sign Up</button>
+          <div className="mb-6 grid grid-cols-2 rounded-2xl border-0 bg-gradient-to-r from-slate-100 to-slate-200 p-1.5 text-sm font-medium">
+            <button onClick={() => setTab('signin')} className={`rounded-xl py-2.5 transition-all duration-300 ${tab === 'signin' ? 'bg-white shadow-lg shadow-blue-500/20 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>Đăng nhập</button>
+            <button onClick={() => setTab('signup')} className={`rounded-xl py-2.5 transition-all duration-300 ${tab === 'signup' ? 'bg-white shadow-lg shadow-blue-500/20 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>Đăng ký</button>
           </div>
 
           {tab === 'signin' ? (
-            <form onSubmit={signInForm.handleSubmit(onSubmitSignIn)} className="space-y-3">
+            <form onSubmit={signInForm.handleSubmit(onSubmitSignIn)} className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium">Email</label>
-                <input type="email" {...signInForm.register('email')} className="w-full rounded-md border bg-slate-50 px-3 py-2 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                {signInForm.formState.errors.email && <p className="mt-1 text-sm text-red-600">{signInForm.formState.errors.email.message}</p>}
+                <label className="mb-2 block text-sm font-medium text-gray-700">Email</label>
+                <input type="email" {...signInForm.register('email')} className="w-full rounded-2xl border-0 bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-3.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:shadow-lg transition-all duration-300" placeholder="Nhập email của bạn" />
+                {signInForm.formState.errors.email && <p className="mt-2 text-sm text-red-500">{signInForm.formState.errors.email.message}</p>}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Password</label>
-                <input type="password" {...signInForm.register('password')} className="w-full rounded-md border bg-slate-50 px-3 py-2 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                {signInForm.formState.errors.password && <p className="mt-1 text-sm text-red-600">{signInForm.formState.errors.password.message}</p>}
+                <label className="mb-2 block text-sm font-medium text-gray-700">Mật khẩu</label>
+                <input type="password" {...signInForm.register('password')} className="w-full rounded-2xl border-0 bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-3.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:shadow-lg transition-all duration-300" placeholder="Nhập mật khẩu của bạn" />
+                {signInForm.formState.errors.password && <p className="mt-2 text-sm text-red-500">{signInForm.formState.errors.password.message}</p>}
               </div>
-              <button type="submit" disabled={signInForm.formState.isSubmitting} className="btn w-full">{signInForm.formState.isSubmitting ? 'Signing in…' : 'Sign In'}</button>
+              <button type="submit" disabled={signInForm.formState.isSubmitting} className="w-full rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 py-3.5 text-white font-medium shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed">{signInForm.formState.isSubmitting ? 'Đang đăng nhập…' : 'Đăng nhập'}</button>
             </form>
           ) : (
-            <form onSubmit={signUpForm.handleSubmit(onSubmitSignUp)} className="space-y-3">
+            <form onSubmit={signUpForm.handleSubmit(onSubmitSignUp)} className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium">Full name</label>
-                <input {...signUpForm.register('name')} className="w-full rounded-md border bg-slate-50 px-3 py-2 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                {signUpForm.formState.errors.name && <p className="mt-1 text-sm text-red-600">{signUpForm.formState.errors.name.message}</p>}
+                <label className="mb-2 block text-sm font-medium text-gray-700">Email</label>
+                <input type="email" {...signUpForm.register('email')} className="w-full rounded-2xl border-0 bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-3.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:shadow-lg transition-all duration-300" placeholder="Nhập email của bạn" />
+                {signUpForm.formState.errors.email && <p className="mt-2 text-sm text-red-500">{signUpForm.formState.errors.email.message}</p>}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Email</label>
-                <input type="email" {...signUpForm.register('email')} className="w-full rounded-md border bg-slate-50 px-3 py-2 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                {signUpForm.formState.errors.email && <p className="mt-1 text-sm text-red-600">{signUpForm.formState.errors.email.message}</p>}
+                <label className="mb-2 block text-sm font-medium text-gray-700">Mật khẩu</label>
+                <input type="password" {...signUpForm.register('password')} className="w-full rounded-2xl border-0 bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-3.5 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:shadow-lg transition-all duration-300" placeholder="Nhập mật khẩu" />
+                {signUpForm.formState.errors.password && <p className="mt-2 text-sm text-red-500">{signUpForm.formState.errors.password.message}</p>}
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">Password</label>
-                  <input type="password" {...signUpForm.register('password')} className="w-full rounded-md border bg-slate-50 px-3 py-2 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  {signUpForm.formState.errors.password && <p className="mt-1 text-sm text-red-600">{signUpForm.formState.errors.password.message}</p>}
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">Confirm</label>
-                  <input type="password" {...signUpForm.register('confirm')} className="w-full rounded-md border bg-slate-50 px-3 py-2 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  {signUpForm.formState.errors.confirm && <p className="mt-1 text-sm text-red-600">{signUpForm.formState.errors.confirm.message}</p>}
-                </div>
-              </div>
-              <button type="submit" disabled={signUpForm.formState.isSubmitting} className="btn w-full">{signUpForm.formState.isSubmitting ? 'Creating…' : 'Create account'}</button>
+              <button type="submit" disabled={signUpForm.formState.isSubmitting} className="w-full rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 py-3.5 text-white font-medium shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed">{signUpForm.formState.isSubmitting ? 'Đang tạo…' : 'Tạo tài khoản'}</button>
             </form>
           )}
 
-          <div className="mt-5 text-center text-sm text-gray-600">
+          <div className="mt-6 text-center text-sm text-gray-500">
             {tab === 'signin' ? (
-              <span>Chưa có tài khoản? <button onClick={() => setTab('signup')} className="text-blue-600 hover:underline">Đăng ký</button></span>
+              <span>Chưa có tài khoản? <button onClick={() => setTab('signup')} className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200">Đăng ký</button></span>
             ) : (
-              <span>Đã có tài khoản? <button onClick={() => setTab('signin')} className="text-blue-600 hover:underline">Đăng nhập</button></span>
+              <span>Đã có tài khoản? <button onClick={() => setTab('signin')} className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200">Đăng nhập</button></span>
             )}
           </div>
         </div>
