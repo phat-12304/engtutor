@@ -1,4 +1,23 @@
-function PricingCard({ title, price, features, isPopular = false }: { title: string; price: string; features: string[]; isPopular?: boolean }) {
+import { useState, useEffect } from 'react'
+import { PackageService, type Package } from '../services'
+import { useUserStore } from '../shared/store'
+import { useNavigate } from 'react-router-dom'
+
+function PricingCard({ 
+  title, 
+  price, 
+  features, 
+  isPopular = false, 
+  packageId,
+  onSelectPackage 
+}: { 
+  title: string; 
+  price: string; 
+  features: string[]; 
+  isPopular?: boolean;
+  packageId: string;
+  onSelectPackage: (packageId: string, price: number) => void;
+}) {
   return (
     <div className={`group relative flex flex-col rounded-3xl border-0 bg-white/90 backdrop-blur-sm p-8 shadow-lg shadow-gray-900/10 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-300 transform hover:scale-[1.02] hover:bg-white ${isPopular ? 'ring-2 ring-blue-500/20' : ''}`}>
       {isPopular && (
@@ -28,11 +47,14 @@ function PricingCard({ title, price, features, isPopular = false }: { title: str
         ))}
       </ul>
       
-      <button className={`w-full rounded-2xl py-3.5 font-medium transition-all duration-300 transform hover:scale-105 ${
-        isPopular 
-          ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40' 
-          : 'bg-gradient-to-r from-slate-100 to-slate-200 text-gray-700 hover:from-slate-200 hover:to-slate-300'
-      }`}>
+      <button 
+        onClick={() => onSelectPackage(packageId, parseInt(price.replace('₫', '').replace(/,/g, '')))}
+        className={`w-full rounded-2xl py-3.5 font-medium transition-all duration-300 transform hover:scale-105 ${
+          isPopular 
+            ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40' 
+            : 'bg-gradient-to-r from-slate-100 to-slate-200 text-gray-700 hover:from-slate-200 hover:to-slate-300'
+        }`}
+      >
         {isPopular ? 'Chọn gói phổ biến' : 'Chọn gói'}
       </button>
     </div>
@@ -40,6 +62,87 @@ function PricingCard({ title, price, features, isPopular = false }: { title: str
 }
 
 function PricingPage() {
+  const [packages, setPackages] = useState<Package[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const user = useUserStore((s) => s.user)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    setIsLoading(true)
+    setError(null)
+    
+    PackageService.getPackages()
+      .then((packages) => {
+        // Sử dụng service method để lọc gói học
+        const filteredPackages = PackageService.filterNonTrialPackages(packages)
+        setPackages(filteredPackages)
+      })
+      .catch((err) => {
+        setError('Không thể tải danh sách gói học')
+        console.error(err)
+      })
+      .finally(() => {
+        setIsLoading(false)
+      })
+  }, [])
+
+  // Hàm tách features từ field desc (nối bằng dấu ;)
+  const parseFeaturesFromDesc = (desc: string): string[] => {
+    if (!desc) return []
+    return desc.split(';').map(feature => feature.trim()).filter(feature => feature.length > 0)
+  }
+
+  const handleSelectPackage = async (packageId: string, priceVnd: number) => {
+    if (!user) {
+      // Nếu chưa đăng nhập, chuyển đến trang login
+      navigate('/login')
+      return
+    }
+
+    // Chuyển đến trang thanh toán với thông tin gói học
+    navigate(`/payment?packageId=${packageId}&price=${priceVnd}`)
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-[80dvh] bg-gradient-to-br from-blue-50/30 via-slate-50/20 to-indigo-50/30">
+        <div className="container-page py-16 text-center">
+          <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 flex items-center justify-center">
+            <svg className="w-12 h-12 text-blue-500 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-gray-700">Đang tải gói học...</h3>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-[80dvh] bg-gradient-to-br from-blue-50/30 via-slate-50/20 to-indigo-50/30">
+        <div className="container-page py-16 text-center">
+          <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-r from-red-100 to-pink-100 flex items-center justify-center">
+            <svg className="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">Có lỗi xảy ra</h3>
+          <p className="text-red-600">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            Thử lại
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-[80dvh] bg-gradient-to-br from-blue-50/30 via-slate-50/20 to-indigo-50/30">
       <div className="container-page py-16">
@@ -48,47 +151,32 @@ function PricingPage() {
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">Chọn gói học phù hợp với mục tiêu và ngân sách của bạn. Tất cả gói đều bao gồm gia sư chất lượng cao và hỗ trợ 24/7.</p>
         </div>
         
-                 <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
+         {packages.map((pkg) => (
            <PricingCard 
-             title="Cơ bản" 
-             price="$49" 
-             features={[
-               "4 buổi học 1-1", 
-               "Lịch học linh hoạt", 
-               "Hỗ trợ qua chat 24/7",
-               "Tài liệu cơ bản",
-               "Báo cáo tiến bộ"
-             ]} 
+             key={pkg.id}
+             title={pkg.name} 
+             price={PackageService.formatPriceVND(PackageService.convertPriceToVND(pkg.price))} 
+             features={parseFeaturesFromDesc(pkg.desc)}
+             isPopular={pkg.popular}
+             packageId={pkg.id}
+             onSelectPackage={handleSelectPackage}
            />
-           <PricingCard 
-             title="Tiêu chuẩn" 
-             price="$129" 
-             features={[
-               "12 buổi học 1-1", 
-               "Kiểm tra đầu vào miễn phí", 
-               "Theo dõi tiến bộ chi tiết",
-               "Tài liệu nâng cao",
-               "Ưu tiên đặt lịch",
-               "Hỗ trợ qua video call"
-             ]} 
-             isPopular={true}
-           />
-           <PricingCard 
-             title="Nâng cao" 
-             price="$259" 
-             features={[
-               "24 buổi học 1-1", 
-               "Kèm tài liệu theo mục tiêu", 
-               "Ưu tiên chọn gia sư",
-               "Lộ trình học cá nhân hóa",
-               "Hỗ trợ 24/7 qua nhiều kênh",
-               "Đánh giá định kỳ",
-               "Chứng chỉ hoàn thành"
-             ]} 
-           />
-         </div>
-        
-        
+         ))}
+       </div>
+
+      {/* Fallback nếu không có gói nào */}
+      {packages.length === 0 && !isLoading && (
+        <div className="text-center py-16">
+          <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 flex items-center justify-center">
+            <svg className="w-12 h-12 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">Chưa có gói học</h3>
+          <p className="text-gray-500">Vui lòng thử lại sau</p>
+        </div>
+      )}
       </div>
     </div>
   )

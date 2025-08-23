@@ -1,9 +1,39 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { mockTutors } from '../shared/mockData'
-import type { Tutor } from '../shared/mockData'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Api } from '../shared/api'
+import { useUserStore } from '../shared/store'
 
-function TutorCard({ tutor }: { tutor: Tutor }) {
+type TutorCardData = {
+  id: string
+  name: string
+  avatarUrl: string
+  country: string
+  specialties: string[]
+  rating: number
+  reviews: number
+}
+
+function TutorCard({ tutor }: { tutor: TutorCardData }) {
+  const navigate = useNavigate()
+  const isAuthenticated = useUserStore((s) => s.isAuthenticated)
+
+  const handleTrialClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    
+    if (!isAuthenticated) {
+      // Chưa đăng nhập -> chuyển đến trang đăng nhập với redirect URL
+      navigate('/login', { 
+        state: { 
+          from: `/booking/${tutor.id}`,
+          message: 'Vui lòng đăng nhập để đặt lịch học thử'
+        }
+      })
+    } else {
+      // Đã đăng nhập -> chuyển đến trang đặt lịch
+      navigate(`/booking/${tutor.id}`)
+    }
+  }
+
   return (
          <div className="group rounded-3xl border-0 bg-white/90 backdrop-blur-sm p-6 shadow-lg shadow-gray-900/10 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-300 transform hover:scale-[1.02] hover:bg-white">
        <div className="flex items-start gap-4">
@@ -43,9 +73,12 @@ function TutorCard({ tutor }: { tutor: Tutor }) {
                </div>
                <span className="text-gray-500 text-sm">({tutor.reviews} đánh giá)</span>
              </div>
-             <Link to={`/booking/${tutor.id}`} className="rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 px-4 py-2.5 text-white font-medium shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300 transform hover:scale-105 whitespace-nowrap text-sm">
+             <button 
+               onClick={handleTrialClick}
+               className="rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 px-4 py-2.5 text-white font-medium shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300 transform hover:scale-105 whitespace-nowrap text-sm"
+             >
                Học thử
-             </Link>
+             </button>
            </div>
         </div>
       </div>
@@ -55,9 +88,53 @@ function TutorCard({ tutor }: { tutor: Tutor }) {
 
 function TutorsPage() {
   const [query, setQuery] = useState('')
-  const filtered = useMemo(() => {
-    const q = query.toLowerCase()
-    return mockTutors.filter(t => t.name.toLowerCase().includes(q) || t.specialties.join(' ').toLowerCase().includes(q))
+  const [tutors, setTutors] = useState<TutorCardData[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Hàm fetch tutors với search
+  const fetchTutors = async (searchQuery: string = '') => {
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      const params: Record<string, unknown> = { page: 1, limit: 50 }
+      if (searchQuery.trim()) {
+        params.search = searchQuery.trim()
+      }
+      
+      const res = await Api.searchTutors(params)
+      const items = Array.isArray(res.data?.data) ? res.data.data : []
+      const mapped: TutorCardData[] = items.map((item: { id: string; name: string; image_url: string; nation: string }) => ({
+        id: item.id,
+        name: item.name ?? '',
+        avatarUrl: item.image_url ?? '',
+        country: item.nation ?? '',
+        specialties: [],
+        rating: 5.0,
+        reviews: 0,
+      }))
+      setTutors(mapped)
+    } catch (e) {
+      setError('Không thể tải danh sách gia sư')
+      console.error(e)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Load tutors ban đầu
+  useEffect(() => {
+    fetchTutors()
+  }, [])
+
+  // Debounce search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchTutors(query)
+    }, 500) // Delay 500ms sau khi user ngừng gõ
+
+    return () => clearTimeout(timeoutId)
   }, [query])
 
   return (
@@ -85,7 +162,26 @@ function TutorsPage() {
           <Link to="/pricing" className="rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 px-8 py-4 text-white font-medium shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300 transform hover:scale-105 whitespace-nowrap">Xem gói học</Link>
         </div>
         
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-16">
+            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 flex items-center justify-center">
+              <svg className="w-12 h-12 text-blue-500 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">Đang tải danh sách gia sư...</h3>
+          </div>
+        ) : error ? (
+          <div className="text-center py-16">
+            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-r from-red-100 to-pink-100 flex items-center justify-center">
+              <svg className="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">Có lỗi xảy ra</h3>
+            <p className="text-red-600">{error}</p>
+          </div>
+        ) : tutors.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 flex items-center justify-center">
               <svg className="w-12 h-12 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,7 +193,7 @@ function TutorsPage() {
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((t, index) => (
+            {tutors.map((t: TutorCardData, index: number) => (
               <div key={t.id} className="animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
                 <TutorCard tutor={t} />
               </div>

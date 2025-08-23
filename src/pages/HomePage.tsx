@@ -1,74 +1,58 @@
 import { Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { HomeController } from '../controllers'
+import type { CountState } from '../services/AnimationService'
 
 function HomePage() {
-  const [counts, setCounts] = useState({
+  const [counts, setCounts] = useState<CountState>({
     students: 0,
     tutors: 0,
     lessons: 0,
     rating: 0
   })
 
+  const statsSectionRef = useRef<HTMLDivElement>(null)
+  const homeControllerRef = useRef<HomeController | null>(null)
+
   useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          // Start counting animation
-          const targets = {
-            students: 500,
-            tutors: 50,
-            lessons: 1000,
-            rating: 4.9
-          }
-          
-          const duration = 2000 // 2 seconds
-          const steps = 60
-          const stepValue: { [key: string]: number } = {}
-          
-          Object.keys(targets).forEach(key => {
-            stepValue[key] = targets[key as keyof typeof targets] / steps
-          })
-          
-          let currentStep = 0
-          const timer = setInterval(() => {
-            currentStep++
-            
-            setCounts({
-              students: Math.min(Math.floor(currentStep * stepValue.students), targets.students),
-              tutors: Math.min(Math.floor(currentStep * stepValue.tutors), targets.tutors),
-              lessons: Math.min(Math.floor(currentStep * stepValue.lessons), targets.lessons),
-              rating: Math.min(parseFloat((currentStep * stepValue.rating).toFixed(1)), targets.rating)
-            })
-            
-            if (currentStep >= steps) {
-              clearInterval(timer)
-              setCounts(targets)
-            }
-          }, duration / steps)
-        }
-      })
-    }, { threshold: 0.5 })
-    
-    const statsSection = document.querySelector('#stats-section')
-    if (statsSection) {
-      observer.observe(statsSection)
+    if (!statsSectionRef.current) return
+
+    // Tạo controller instance
+    homeControllerRef.current = new HomeController(
+      // onCountsUpdate callback
+      (newCounts) => {
+        setCounts(newCounts)
+      },
+      // onAnimationComplete callback
+      () => {
+        console.log('Animation completed')
+      }
+    )
+
+    // Bắt đầu animation
+    homeControllerRef.current.startCountAnimation(statsSectionRef.current)
+
+    // Cleanup khi component unmount
+    return () => {
+      if (homeControllerRef.current) {
+        homeControllerRef.current.stopAnimation()
+      }
     }
-    
-    return () => observer.disconnect()
   }, [])
+
   return (
     <>
-                                                                                                                                                                                                                               {/* Hero Section */}
-           <section className="min-h-[27dvh] bg-gradient-to-br from-blue-50/40 via-slate-50/30 to-indigo-50/40 relative overflow-hidden">
-             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-indigo-500/5"></div>
-             <div className="container-page relative grid min-h-[30dvh] items-center gap-8 py-0 lg:grid-cols-2">
+      {/* Hero Section */}
+      <section className="min-h-[27dvh] bg-gradient-to-br from-blue-50/40 via-slate-50/30 to-indigo-50/40 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-indigo-500/5"></div>
+        <div className="container-page relative grid min-h-[30dvh] items-center gap-8 py-0 lg:grid-cols-2">
           <div className="space-y-8">
-                         <div className="space-y-4">
-                 <h1 className="text-3xl font-bold leading-tight sm:text-5xl lg:text-6xl">
-                  <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                    Học tiếng Anh 1-1 với gia sư phù hợp nhất
-                  </span>
-                </h1>
+            <div className="space-y-4">
+              <h1 className="text-3xl font-bold leading-tight sm:text-5xl lg:text-6xl">
+                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  Học tiếng Anh 1-1 với gia sư phù hợp nhất
+                </span>
+              </h1>
               <p className="text-lg text-gray-600 max-w-2xl">
                 Tìm gia sư chất lượng cao, đặt lịch học thử miễn phí, và chọn gói học phù hợp với mục tiêu của bạn.
               </p>
@@ -102,10 +86,10 @@ function HomePage() {
       {/* How It Works Section */}
       <section className="py-20 bg-white">
         <div className="container-page">
-                     <div className="text-center mb-16">
-             <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-4 leading-relaxed py-2">
-               Cách hoạt động
-             </h2>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-4 leading-relaxed py-2">
+              Cách hoạt động
+            </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Chỉ cần 3 bước đơn giản để bắt đầu hành trình học tiếng Anh của bạn
             </p>
@@ -193,7 +177,7 @@ function HomePage() {
       </section>
 
       {/* Stats Section */}
-      <section id="stats-section" className="py-20 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+      <section id="stats-section" ref={statsSectionRef} className="py-20 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
         <div className="container-page">
           <div className="grid gap-8 sm:grid-cols-4 text-center">
             {[

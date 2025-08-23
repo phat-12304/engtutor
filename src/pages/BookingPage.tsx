@@ -1,8 +1,28 @@
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate, useParams } from 'react-router-dom'
-import { mockTutors } from '../shared/mockData'
+import { Api } from '../shared/api'
+
+// Type dựa trên API backend
+type TutorData = {
+  id: string
+  name: string
+  image: string
+  image_url: string
+  nation: string
+  createdAt: string
+}
+
+type ScheduleData = {
+  id: string
+  datetime: string
+  is_try: boolean
+  id_tutor: string
+  id_order?: string
+  createdAt: string
+}
 
 const schema = z.object({
   name: z.string().min(2, 'Nhập tên của bạn'),
@@ -16,14 +36,54 @@ type FormValues = z.infer<typeof schema>
 function BookingPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const tutor = mockTutors.find(t => t.id === id)
+  const [tutor, setTutor] = useState<TutorData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [availableSlots, setAvailableSlots] = useState<string[]>([])
+
+  useEffect(() => {
+    if (!id) return
+    
+    setIsLoading(true)
+    setError(null)
+    
+    // Lấy thông tin giáo viên
+    Api.getTutor(id)
+      .then((res) => {
+        setTutor(res.data.data)
+      })
+      .catch((err) => {
+        setError('Không thể tải thông tin gia sư')
+        console.error(err)
+      })
+    
+    // Lấy lịch học thử có sẵn
+    Api.getTrySchedules(id)
+      .then((res) => {
+        const slots = res.data.data.map((schedule: ScheduleData) => schedule.datetime)
+        setAvailableSlots(slots)
+      })
+      .catch((err) => {
+        console.error('Không thể tải lịch học thử:', err)
+        setAvailableSlots([])
+      })
+      .finally(() => {
+        setIsLoading(false)
+      })
+  }, [id])
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { slot: tutor?.availableSlots?.[0] ?? '' },
+    defaultValues: { slot: '' },
   })
 
-  if (!tutor) return <div className="container-page py-8">Gia sư không tồn tại.</div>
+  if (isLoading) {
+    return <div className="container-page py-8">Đang tải thông tin gia sư...</div>
+  }
+
+  if (error || !tutor) {
+    return <div className="container-page py-8">Không thể tải thông tin gia sư.</div>
+  }
 
   const onSubmit = (values: FormValues) => {
     sessionStorage.setItem('booking', JSON.stringify({ ...values, tutorId: tutor.id }))
@@ -86,18 +146,22 @@ function BookingPage() {
                   {...register('slot')} 
                   className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-sm transition-all duration-300 focus:border-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-100 hover:border-gray-300 cursor-pointer hover-lift"
                 >
-                  {tutor.availableSlots.map(s => (
-                    <option key={s} value={s}>
-                      {new Date(s).toLocaleString('vi-VN', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </option>
-                  ))}
+                  {availableSlots.length > 0 ? (
+                    availableSlots.map(slot => (
+                      <option key={slot} value={slot}>
+                        {new Date(slot).toLocaleString('vi-VN', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">Đang tải lịch học...</option>
+                  )}
                 </select>
               </div>
               
@@ -127,14 +191,16 @@ function BookingPage() {
         <aside className="lg:col-span-1 animate-slideUp" style={{animationDelay: '0.2s'}}>
           <div className="sticky top-8">
             <div className="rounded-2xl glass p-6 shadow-xl hover-lift">
-              <div className="mb-4 text-center">
-                <div className="mx-auto mb-3 h-16 w-16 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center animate-bounceIn">
-                  <span className="text-2xl text-white font-bold">
-                    {tutor.name.charAt(0)}
-                  </span>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-800">Tóm tắt</h3>
-              </div>
+                             <div className="mb-4 text-center">
+                 <div className="mx-auto mb-3 h-16 w-16 rounded-full overflow-hidden animate-bounceIn">
+                   <img 
+                     src={tutor.image_url} 
+                     alt={tutor.name}
+                     className="w-full h-full object-cover"
+                   />
+                 </div>
+                 <h3 className="text-xl font-semibold text-gray-800">Tóm tắt</h3>
+               </div>
               
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-3 rounded-xl bg-blue-50/50 hover-lift transition-all duration-300">
@@ -144,7 +210,7 @@ function BookingPage() {
                 
                 <div className="flex items-center justify-between p-3 rounded-xl bg-green-50/50 hover-lift transition-all duration-300">
                   <span className="text-sm font-medium text-gray-600">Phí giờ:</span>
-                  <span className="text-lg font-bold text-green-600">{tutor.pricePerHour}$</span>
+                  <span className="text-lg font-bold text-green-600">25$</span>
                 </div>
                 
                 <div className="flex items-center justify-between p-3 rounded-xl bg-purple-50/50 hover-lift transition-all duration-300">

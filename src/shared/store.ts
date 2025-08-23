@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 export type BookingState = {
   tutorId?: string
@@ -9,9 +10,29 @@ export type BookingState = {
   reset: () => void
 }
 
-export const useBookingStore = create<BookingState>((set) => ({
-  set: (partial) => set((s) => ({ ...s, ...partial })),
-  reset: () => set({ tutorId: undefined, slot: undefined, name: undefined, email: undefined }),
-}))
+export type UserState = {
+  user: {
+    id: string
+    email: string
+    name?: string
+    image?: string
+    image_url?: string
+  } | null
+  isAuthenticated: boolean
+  setUser: (user: UserState['user']) => void
+  logout: () => void
+}
 
-
+export const useUserStore = create<UserState>()(
+  persist(
+    (set) => ({
+      user: null,
+      isAuthenticated: false,
+      setUser: (user) => set({ user, isAuthenticated: !!user }),
+      logout: () => set({ user: null, isAuthenticated: false }),
+    }),
+    {
+      name: 'user-storage',
+    }
+  )
+)
